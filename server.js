@@ -7,16 +7,19 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Sécurité : on vérifie la clé au démarrage
+/* ----------  VÉRIFICATION CLÉ  ---------- */
 if (!process.env.OPENAI_API_KEY) {
-  console.error('❌ OPENAI_API_KEY introuvable dans les variables d’environnement');
+  console.error('❌ OPENAI_API_KEY manquante dans les variables d’environnement');
   process.exit(1);
 }
+console.log('✅ Clé OpenAI chargée');
 
+/* ----------  MIDDLEWARES  ---------- */
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+/* ----------  ROUTE GÉNÉRATION  ---------- */
 app.post('/api/generate', async (req, res) => {
   const { titre, contenu, auteur } = req.body;
 
@@ -39,7 +42,7 @@ Mets les **noms de personnages** en **gras**, et les **noms de lieux** en *itali
         model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.8,
-        max_tokens: 2_500
+        max_tokens: 2500
       },
       {
         headers: {
@@ -57,5 +60,6 @@ Mets les **noms de personnages** en **gras**, et les **noms de lieux** en *itali
   }
 });
 
-app.listen(PORT, () => console.log(`✅ Serveur démarré sur le port ${PORT}`));
-    
+/* ----------  LANCEMENT SERVEUR  ---------- */
+app.listen(PORT, () => console.log(`🚀 Serveur démarré sur le port ${PORT}`));
+  
