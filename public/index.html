@@ -2,344 +2,79 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Série Romanesque - Validation épisode par épisode</title>
+  <title>Série Romanesque - Accueil</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     :root {
-      --bg: #fdfdfd;
-      --card: #ffffff;
-      --text: #222;
-      --accent: #6c63ff;
-      --accent-hover: #554dff;
+      --bg: linear-gradient(135deg, #6c63ff 0%, #121212 100%);
+      --text: #fff;
+      --accent: #ffb74d;
       --radius: 12px;
-      --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #121212;
-        --card: #1e1e1e;
-        --text: #e0e0e0;
-        --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-      }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-    body { background: var(--bg); color: var(--text); line-height: 1.7; }
-    header { position: sticky; top: 0; background: var(--card); box-shadow: var(--shadow); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
-    header h2 { font-size: 1.3rem; }
-    .ep-num { font-weight: 600; color: var(--accent); }
-    main { max-width: 1000px; margin: 30px auto; padding: 0 20px; display: flex; gap: 20px; }
-    .left, .right { flex: 1; background: var(--card); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); }
-    textarea, input, button { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: var(--radius); font-size: 1rem; }
-    button { background: var(--accent); color: #fff; border: none; cursor: pointer; transition: background 0.3s ease; }
-    button:hover { background: var(--accent-hover); }
-    button:disabled { background: #999; cursor: not-allowed; }
-    .episode-box { white-space: pre-wrap; font-size: 1.05rem; max-height: 60vh; overflow-y: auto; }
-    .char-tag { display: inline-flex; align-items: center; background: #eee; padding: 4px 8px; border-radius: 20px; margin: 4px; font-size: 0.9rem; }
-    .char-tag button { margin-left: 6px; background: transparent; color: var(--text); border: none; font-weight: bold; cursor: pointer; }
-    select { width: 100%; padding: 8px; margin-bottom: 8px; border-radius: var(--radius); border: 1px solid #ccc; }
-    .hidden { display: none; }
-    @media (max-width: 700px) { main { flex-direction: column; } }
+    body { background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; }
+    h1 { font-size: 3rem; font-weight: 600; margin-bottom: 1rem; }
+    .sub { font-size: 1.2rem; margin-bottom: 2rem; opacity: .9; }
+    .btn { background: var(--accent); color: #121212; border: none; padding: 14px 28px; border-radius: var(--radius); font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: transform .2s ease; }
+    .btn:hover { transform: scale(1.05); }
+    .link { margin-top: 1rem; color: var(--accent); cursor: pointer; font-size: .9rem; }
+    footer { position: absolute; bottom: 20px; font-size: .8rem; opacity: .7; }
+    /* Pop-in paramètres */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); justify-content: center; align-items: center; z-index: 100; }
+    .modal-content { background: #fff; color: #222; padding: 30px; border-radius: var(--radius); max-width: 500px; width: 90%; }
+    .modal-content h3 { margin-bottom: 1rem; }
+    textarea, input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: var(--radius); }
+    .modal-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 1rem; }
   </style>
 </head>
 <body>
-  <header>
-    <h2 id="serieTitle">Titre de la série</h2>
-    <span class="ep-num" id="epNum">Épisode 0 / 0</span>
-  </header>
+  <h1>Crée ta série épisode par épisode</h1>
+  <p class="sub">Raconte, rectifie, valide – l’IA écrit pour toi.</p>
+  <button class="btn" onclick="showParams()">Commencer l’histoire</button>
+  <div class="link" onclick="showParams()">Paramètres avancés</div>
+  <footer>Ton récit commence ici</footer>
 
-  <main>
-    <!-- CONFIG -->
-    <section class="left" id="setup">
-      <h3>Paramètres</h3>
-      <input id="mainTitle" placeholder="Titre général de la série" />
-      <textarea id="characters" placeholder="Personnages (un par ligne : Nom - Rôle)"></textarea>
-      <input id="wordCount" type="number" value="2000" min="500" max="4000" step="100" />
+  <!-- Pop-in paramètres -->
+  <div id="paramsModal" class="modal">
+    <div class="modal-content">
+      <h3>Paramètres de la série</h3>
+      <input id="popTitle" placeholder="Titre général de la série" />
+      <textarea id="popChars" placeholder="Personnages (Nom - Rôle)"></textarea>
+      <input id="popWords" type="number" value="2000" min="500" max="4000" step="100" />
       <label>Mots par épisode</label>
-      <button onclick="createSerie()">Générer</button>
-    </section>
-
-    <!-- GESTION ÉPISODES -->
-    <section class="right hidden" id="reader">
-      <div class="controls" id="controls"></div>
-
-      <h4>Contenu de l’épisode</h4>
-      <div class="episode-box" id="epContent">Chargement...</div>
-
-      <h4>Contenu narratif attendu</h4>
-      <select id="promptSelect" onchange="switchPrompt()">
-        <option value="">-- Choisir un épisode --</option>
-      </select>
-      <textarea id="userNextPrompt" placeholder="Raconte brièvement ce que tu veux voir arriver ensuite : un nouveau conflit, un twist, une rencontre, un lieu… (laisse vide pour laisser l’IA décider)"></textarea>
-
-      <h4>Gestion des personnages</h4>
-      <input id="newChar" placeholder="Nom - Rôle" />
-      <button onclick="addCharacter()">Ajouter</button>
-      <div id="charList"></div>
-
-      <label>
-        <input type="checkbox" id="isEnd" /> Cet épisode clôt la série (générer l’épilogue)
-      </label>
-    </section>
-  </main>
+      <div class="modal-buttons">
+        <button onclick="closeParams()">Annuler</button>
+        <button onclick="startStory()">Démarrer</button>
+      </div>
+    </div>
+  </div>
 
   <script>
-    /* ----------  STOCKAGE LOCAL  ---------- */
-    let data = {
-      mainTitle: '',
-      characters: [],
-      episodes: [],
-      wordCount: 2000
-    };
-    let current = 0;
-
-    const qs = (sel) => document.querySelector(sel);
-    function saveYAML() {
-      localStorage.setItem('serie', JSON.stringify(data));
+    function showParams() {
+      document.getElementById('paramsModal').style.display = 'flex';
     }
-    function loadYAML() {
-      const raw = localStorage.getItem('serie');
-      if (raw) data = JSON.parse(raw);
+    function closeParams() {
+      document.getElementById('paramsModal').style.display = 'none';
     }
-
-    window.onload = () => {
-      loadYAML();
-      if (data.episodes.length) {
-        qs('#setup').classList.add('hidden');
-        qs('#reader').classList.remove('hidden');
-        renderCharacters();
-        fillPromptSelect();
-        loadEpisode(Math.max(...data.episodes.map(e => e.num)));
-      }
-    };
-
-    async function createSerie() {
-      data.mainTitle = qs('#mainTitle').value.trim();
-      const raw = qs('#characters').value.trim().split('\n').filter(l => l);
-      data.characters = raw.map(l => {
-        const [name, ...rest] = l.split('-');
-        return { name: name.trim(), role: rest.join('-').trim() };
-      });
-      data.wordCount = parseInt(qs('#wordCount').value) || 2000;
-      if (!data.mainTitle) return alert('Titre obligatoire');
-      saveYAML();
-      qs('#serieTitle').textContent = data.mainTitle;
-      qs('#setup').classList.add('hidden');
-      qs('#reader').classList.remove('hidden');
-      renderCharacters();
-      fillPromptSelect();
-      await loadEpisode(1);
+    function startStory() {
+      const title = document.getElementById('popTitle').value.trim();
+      const chars = document.getElementById('popChars').value.trim();
+      const words = document.getElementById('popWords').value;
+      if (!title) return alert('Titre obligatoire');
+      // Stockage local + redirection vers l’éditeur
+      localStorage.setItem('serie', JSON.stringify({
+        mainTitle: title,
+        characters: chars.split('\n').map(l => {
+          const [n, ...r] = l.split('-');
+          return { name: n.trim(), role: r.join('-').trim() };
+        }),
+        wordCount: parseInt(words) || 2000,
+        episodes: []
+      }));
+      window.location.href = 'editor.html';   // ← ton éditeur principal
     }
-
-    /* ----------  PERSONNAGES  ---------- */
-    function renderCharacters() {
-      const list = qs('#charList');
-      list.innerHTML = '';
-      data.characters.forEach((ch, i) => {
-        const tag = document.createElement('div');
-        tag.className = 'char-tag';
-        tag.innerHTML = `
-          ${ch.name} - ${ch.role}
-          <button onclick="removeCharacter(${i})">×</button>
-        `;
-        list.appendChild(tag);
-      });
-    }
-    function addCharacter() {
-      const raw = qs('#newChar').value.trim();
-      if (!raw) return;
-      const [name, ...rest] = raw.split('-');
-      data.characters.push({ name: name.trim(), role: rest.join('-').trim() });
-      qs('#newChar').value = '';
-      saveYAML();
-      renderCharacters();
-    }
-    function removeCharacter(index) {
-      data.characters.splice(index, 1);
-      saveYAML();
-      renderCharacters();
-    }
-
-    /* ----------  PROMPT SELECT  ---------- */
-    function fillPromptSelect() {
-      const select = qs('#promptSelect');
-      select.innerHTML = '<option value="">-- Choisir un épisode --</option>';
-      data.episodes.forEach(ep => {
-        const opt = document.createElement('option');
-        opt.value = ep.num;
-        opt.textContent = `Épisode ${ep.num}`;
-        select.appendChild(opt);
-      });
-    }
-    function switchPrompt() {
-      const num = qs('#promptSelect').value;
-      if (!num) return;
-      const ep = data.episodes.find(e => e.num === parseInt(num));
-      qs('#userNextPrompt').value = ep.userPrompt || '';
-    }
-
-    /* ----------  API CALLS  ---------- */
-    async function callOpenAI(prompt) {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(prompt)
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erreur');
-      return json;
-    }
-    async function callEpilogue() {
-      const res = await fetch('/api/epilogue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: { mainTitle: data.mainTitle, characters: data.characters.map(c => `${c.name} - ${c.role}`).join(', '), summary: data.episodes.map(e => e.summary).join('\n') }
-      });
-      const json = await res.json();
-      return json.epilogue;
-    }
-
-    /* ----------  EPISODES  ---------- */
-    function getSummary() {
-      return data.episodes.map(e => `Épisode ${e.num}: ${e.summary}`).join('\n');
-    }
-    async function generateEpisode(num, userPrompt, isEnd) {
-      const isBeforeLast = num === 999;
-      const payload = {
-        num,
-        mainTitle: data.mainTitle,
-        characters: data.characters.map(c => `${c.name} - ${c.role}`).join(', '),
-        summary: getSummary(),
-        wordCount: data.wordCount,
-        userPrompt,
-        isEnd,
-        isBeforeLast
-      };
-      return await callOpenAI(payload);
-    }
-    async function loadEpisode(num) {
-      current = num;
-      let ep = data.episodes.find(e => e.num === num);
-      if (!ep) {
-        qs('#epContent').textContent = 'Génération en cours...';
-        const userPrompt = qs('#userNextPrompt').value.trim();
-        const isEnd = qs('#isEnd').checked;
-        const raw = await generateEpisode(num, userPrompt, isEnd);
-        const parts = raw.content.split('RÉSUMÉ:');
-        ep = {
-          num,
-          content: parts[0].trim(),
-          summary: (parts[1] || 'Résumé non généré').trim(),
-          locked: false,
-          userPrompt: userPrompt
-        };
-        data.episodes.push(ep);
-        data.episodes.sort((a, b) => a.num - b.num);
-        qs('#userNextPrompt').value = '';
-        qs('#isEnd').checked = false;
-        saveYAML();
-        fillPromptSelect();
-      }
-      renderEpisode(ep);
-    }
-    function renderEpisode(ep) {
-      qs('#epContent').textContent = ep.content;
-      qs('#epNum').textContent = `Épisode ${ep.num} / ${data.episodes.length}`;
-      qs('#btnPrev').disabled = ep.num === 1;
-      qs('#btnNext').disabled = !ep.locked;
-      qs('#promptSelect').value = ep.num || '';
-      qs('#userNextPrompt').value = ep.userPrompt || '';
-    }
-    function lockAndNext() {
-      const ep = data.episodes.find(e => e.num === current);
-      if (!ep) return;
-      ep.locked = true;
-      ep.userPrompt = qs('#userNextPrompt').value.trim();
-      saveYAML();
-      renderEpisode(ep);
-      if (qs('#isEnd').checked) return endSerie();
-      if (current === 1000) return endSerie();
-    }
-    async function nextEp() {
-      lockAndNext();
-      if (qs('#btnNext').disabled) return;
-      await loadEpisode(current + 1);
-    }
-    async function prevEp() {
-      if (current > 1) await loadEpisode(current - 1);
-    }
-    async function regenCurrentEp() {
-      const idx = data.episodes.findIndex(e => e.num === current);
-      if (idx === -1) return;
-      data.episodes.splice(idx, 1);
-      saveYAML();
-      await loadEpisode(current);
-    }
-    async function endSerie() {
-      const epilogue = await callEpilogue();
-      data.epilogue = epilogue;
-      saveYAML();
-      alert('Épilogue généré ! Tu peux exporter le PDF complet.');
-      qs('#epContent').textContent += '\n\n' + epilogue;
-    }
-    function exportPDF() {
-      const element = qs('#epContent');
-      const opt = {
-        margin: 1,
-        filename: `${data.mainTitle.replace(/\s+/g, '_')}_episode_${current}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-      };
-      html2pdf().set(opt).from(element).save();
-    }
-
-    /* ----------  AFFICHAGE CONDITIONNEL  ---------- */
-    const controls = qs('#controls');
-
-    function showGenerateButton() {
-      controls.innerHTML = '<button onclick="loadEpisode(1)">Générer</button>';
-    }
-
-    function showValidationButton(num) {
-      controls.innerHTML = `<button onclick="validateEpisode(${num})">Valider épisode ${num}</button>`;
-    }
-
-    function showFullControls() {
-      controls.innerHTML = `
-        <button onclick="prevEp()" id="btnPrev">‹ Précédent</button>
-        <button onclick="nextEp()" id="btnNext">Suivant ›</button>
-        <button onclick="regenCurrentEp()">Re-générer</button>
-        <button onclick="exportPDF()">Export PDF</button>
-      `;
-    }
-
-    function validateEpisode(num) {
-      const next = confirm(`Épisode ${num} validé – passer à l’épisode suivant ?`);
-      if (!next) return;
-      lockAndNext();
-      if (num === 999 || isEndRequested()) {
-        generateEpilogue();
-      }
-    }
-
-    function isEndRequested() {
-      return qs('#isEnd').checked || qs('#userNextPrompt').value.toLowerCase().includes('fin');
-    }
-
-    async function generateEpilogue() {
-      const epilogue = await callEpilogue();
-      data.epilogue = epilogue;
-      saveYAML();
-      alert('Épilogue généré automatiquement !');
-      qs('#epContent').textContent += '\n\n' + epilogue;
-    }
-
-    /* ----------  INITIALISATION  ---------- */
-    showGenerateButton();
   </script>
 </body>
-  </html>
-  
-  
+                                  </html>
+                                  
