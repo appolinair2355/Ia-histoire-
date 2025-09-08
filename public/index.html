@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Générateur d’Histoires</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; background:#f9f9f9; }
+    h1 { color:#111; }
+    input, textarea, button { width:100%; padding:10px; margin:10px 0; font-size:16px; }
+    textarea { min-height:120px; }
+    #output { background:#fff; padding:20px; border-radius:8px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+
+  <h1>Générateur d’Histoires Intelligent</h1>
+
+  <input id="titre" placeholder="Titre de l’histoire" />
+  <textarea id="contenu" placeholder="Contenu ou thème principal"></textarea>
+  <input id="auteur" placeholder="Nom de l’auteur" />
+  <button onclick="generer()">Générer l’histoire</button>
+
+  <div id="output"></div>
+
+  <script>
+    async function generer() {
+      const titre = document.getElementById('titre').value.trim();
+      const contenu = document.getElementById('contenu').value.trim();
+      const auteur = document.getElementById('auteur').value.trim();
+
+      if (!titre || !contenu || !auteur) return alert('Remplis tous les champs');
+
+      const btn = event.target;
+      btn.disabled = true;
+      btn.textContent = 'Génération...';
+
+      try {
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ titre, contenu, auteur })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur');
+        document.getElementById('output').innerHTML = data.story;
+      } catch (e) {
+        alert('Erreur : ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Générer l’histoire';
+      }
+    }
+  </script>
+
+</body>
+</html>
