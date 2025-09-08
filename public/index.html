@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Série Romanesque - Gestion complète</title>
+  <title>Série Romanesque - Validation épisode par épisode</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -38,6 +38,8 @@
     .episode-box { white-space: pre-wrap; font-size: 1.05rem; max-height: 60vh; overflow-y: auto; }
     .char-tag { display: inline-flex; align-items: center; background: #eee; padding: 4px 8px; border-radius: 20px; margin: 4px; font-size: 0.9rem; }
     .char-tag button { margin-left: 6px; background: transparent; color: var(--text); border: none; font-weight: bold; cursor: pointer; }
+    select { width: 100%; padding: 8px; margin-bottom: 8px; border-radius: var(--radius); border: 1px solid #ccc; }
+    .hidden { display: none; }
     @media (max-width: 700px) { main { flex-direction: column; } }
   </style>
 </head>
@@ -55,23 +57,21 @@
       <textarea id="characters" placeholder="Personnages (un par ligne : Nom - Rôle)"></textarea>
       <input id="wordCount" type="number" value="2000" min="500" max="4000" step="100" />
       <label>Mots par épisode</label>
-      <button onclick="createSerie()">Créer la série</button>
+      <button onclick="createSerie()">Générer</button>
     </section>
 
     <!-- GESTION ÉPISODES -->
     <section class="right hidden" id="reader">
-      <div class="controls">
-        <button onclick="prevEp()" id="btnPrev">‹ Précédent</button>
-        <button onclick="nextEp()" id="btnNext" disabled>Suivant ›</button>
-        <button onclick="regenCurrentEp()">Re-générer</button>
-        <button onclick="exportPDF()">Export PDF</button>
-      </div>
+      <div class="controls" id="controls"></div>
 
       <h4>Contenu de l’épisode</h4>
       <div class="episode-box" id="epContent">Chargement...</div>
 
-      <h4>Ajouter / modifier pour l’épisode suivant</h4>
-      <textarea id="userNextPrompt" placeholder="Tu peux préciser un nouveau conflit, un nouveau lieu, un personnage à introduire... (laisse vide pour laisser l’IA décider)"></textarea>
+      <h4>Contenu narratif attendu</h4>
+      <select id="promptSelect" onchange="switchPrompt()">
+        <option value="">-- Choisir un épisode --</option>
+      </select>
+      <textarea id="userNextPrompt" placeholder="Raconte brièvement ce que tu veux voir arriver ensuite : un nouveau conflit, un twist, une rencontre, un lieu… (laisse vide pour laisser l’IA décider)"></textarea>
 
       <h4>Gestion des personnages</h4>
       <input id="newChar" placeholder="Nom - Rôle" />
@@ -85,7 +85,7 @@
   </main>
 
   <script>
-    /* ----------  STOCKAGE LOCAL (YAML-like)  ---------- */
+    /* ----------  STOCKAGE LOCAL  ---------- */
     let data = {
       mainTitle: '',
       characters: [],
@@ -94,7 +94,6 @@
     };
     let current = 0;
 
-    /* ----------  UTILS  ---------- */
     const qs = (sel) => document.querySelector(sel);
     function saveYAML() {
       localStorage.setItem('serie', JSON.stringify(data));
@@ -104,18 +103,17 @@
       if (raw) data = JSON.parse(raw);
     }
 
-    /* ----------  INIT  ---------- */
     window.onload = () => {
       loadYAML();
       if (data.episodes.length) {
         qs('#setup').classList.add('hidden');
         qs('#reader').classList.remove('hidden');
         renderCharacters();
+        fillPromptSelect();
         loadEpisode(Math.max(...data.episodes.map(e => e.num)));
       }
     };
 
-    /* ----------  CREATION  ---------- */
     async function createSerie() {
       data.mainTitle = qs('#mainTitle').value.trim();
       const raw = qs('#characters').value.trim().split('\n').filter(l => l);
@@ -130,6 +128,7 @@
       qs('#setup').classList.add('hidden');
       qs('#reader').classList.remove('hidden');
       renderCharacters();
+      fillPromptSelect();
       await loadEpisode(1);
     }
 
@@ -160,6 +159,24 @@
       data.characters.splice(index, 1);
       saveYAML();
       renderCharacters();
+    }
+
+    /* ----------  PROMPT SELECT  ---------- */
+    function fillPromptSelect() {
+      const select = qs('#promptSelect');
+      select.innerHTML = '<option value="">-- Choisir un épisode --</option>';
+      data.episodes.forEach(ep => {
+        const opt = document.createElement('option');
+        opt.value = ep.num;
+        opt.textContent = `Épisode ${ep.num}`;
+        select.appendChild(opt);
+      });
+    }
+    function switchPrompt() {
+      const num = qs('#promptSelect').value;
+      if (!num) return;
+      const ep = data.episodes.find(e => e.num === parseInt(num));
+      qs('#userNextPrompt').value = ep.userPrompt || '';
     }
 
     /* ----------  API CALLS  ---------- */
@@ -206,7 +223,7 @@
       let ep = data.episodes.find(e => e.num === num);
       if (!ep) {
         qs('#epContent').textContent = 'Génération en cours...';
-        const userPrompt = num === 1 ? '' : qs('#userNextPrompt').value.trim();
+        const userPrompt = qs('#userNextPrompt').value.trim();
         const isEnd = qs('#isEnd').checked;
         const raw = await generateEpisode(num, userPrompt, isEnd);
         const parts = raw.content.split('RÉSUMÉ:');
@@ -214,13 +231,15 @@
           num,
           content: parts[0].trim(),
           summary: (parts[1] || 'Résumé non généré').trim(),
-          locked: false
+          locked: false,
+          userPrompt: userPrompt
         };
         data.episodes.push(ep);
         data.episodes.sort((a, b) => a.num - b.num);
         qs('#userNextPrompt').value = '';
         qs('#isEnd').checked = false;
         saveYAML();
+        fillPromptSelect();
       }
       renderEpisode(ep);
     }
@@ -229,11 +248,14 @@
       qs('#epNum').textContent = `Épisode ${ep.num} / ${data.episodes.length}`;
       qs('#btnPrev').disabled = ep.num === 1;
       qs('#btnNext').disabled = !ep.locked;
+      qs('#promptSelect').value = ep.num || '';
+      qs('#userNextPrompt').value = ep.userPrompt || '';
     }
     function lockAndNext() {
       const ep = data.episodes.find(e => e.num === current);
       if (!ep) return;
       ep.locked = true;
+      ep.userPrompt = qs('#userNextPrompt').value.trim();
       saveYAML();
       renderEpisode(ep);
       if (qs('#isEnd').checked) return endSerie();
@@ -272,6 +294,51 @@
       };
       html2pdf().set(opt).from(element).save();
     }
+
+    /* ----------  AFFICHAGE CONDITIONNEL  ---------- */
+    const controls = qs('#controls');
+
+    function showGenerateButton() {
+      controls.innerHTML = '<button onclick="loadEpisode(1)">Générer</button>';
+    }
+
+    function showValidationButton(num) {
+      controls.innerHTML = `<button onclick="validateEpisode(${num})">Valider épisode ${num}</button>`;
+    }
+
+    function showFullControls() {
+      controls.innerHTML = `
+        <button onclick="prevEp()" id="btnPrev">‹ Précédent</button>
+        <button onclick="nextEp()" id="btnNext">Suivant ›</button>
+        <button onclick="regenCurrentEp()">Re-générer</button>
+        <button onclick="exportPDF()">Export PDF</button>
+      `;
+    }
+
+    function validateEpisode(num) {
+      const next = confirm(`Épisode ${num} validé – passer à l’épisode suivant ?`);
+      if (!next) return;
+      lockAndNext();
+      if (num === 999 || isEndRequested()) {
+        generateEpilogue();
+      }
+    }
+
+    function isEndRequested() {
+      return qs('#isEnd').checked || qs('#userNextPrompt').value.toLowerCase().includes('fin');
+    }
+
+    async function generateEpilogue() {
+      const epilogue = await callEpilogue();
+      data.epilogue = epilogue;
+      saveYAML();
+      alert('Épilogue généré automatiquement !');
+      qs('#epContent').textContent += '\n\n' + epilogue;
+    }
+
+    /* ----------  INITIALISATION  ---------- */
+    showGenerateButton();
   </script>
 </body>
-</html>
+  </html>
+  
