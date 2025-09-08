@@ -3,7 +3,6 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const path = require('path');
-const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -17,10 +16,8 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Génération d’un épisode
 app.post('/api/generate', async (req, res) => {
-  const { num, mainTitle, characters, summary, wordCount, userPrompt, isEnd } = req.body;
-  const isBeforeLast = num === 999; // exemple
+  const { num, mainTitle, characters, summary, wordCount, userPrompt, isEnd, isBeforeLast } = req.body;
 
   const prompt = `
 Résumé global :
@@ -32,9 +29,9 @@ ${characters}
 Titre général : ${mainTitle}
 Épisode demandé : ${num}
 Mots souhaités : ${wordCount || 2000}
-${userPrompt ? 'Contenu additionnel de l’utilisateur : ' + userPrompt : ''}
+${userPrompt ? 'Instructions utilisateur : ' + userPrompt : ''}
 ${isBeforeLast ? 'Insère en début d’épisode la mention **Avant-dernier épisode**.' : ''}
-${isEnd ? 'Cet épisode doit clore la série principale.' : ''}
+${isEnd ? 'Cet épisode clôt la série principale.' : ''}
 
 Rédige l’épisode ${num} (≈ ${wordCount || 2000} mots) :
 - introduction, développement, cliffhanger ou conclusion
@@ -61,15 +58,14 @@ Rédige l’épisode ${num} (≈ ${wordCount || 2000} mots) :
     const full = data.choices[0].message.content.trim();
     const parts = full.split('RÉSUMÉ:');
     const content = parts[0].trim();
-    const summary = parts[1]?.trim() || 'Résumé non généré';
-    res.json({ content, summary });
+    const episodeSummary = parts[1]?.trim() || 'Résumé non généré';
+    res.json({ content, summary: episodeSummary });
   } catch (err) {
     console.error(err.response?.data || err.message);
     res.status(500).json({ error: 'Erreur génération épisode.' });
   }
 });
 
-// Génération épilogue
 app.post('/api/epilogue', async (req, res) => {
   const { mainTitle, characters, summary } = req.body;
   const prompt = `
@@ -94,15 +90,6 @@ Rédige un **épilogue** de 800 mots :
   }
 });
 
-// Téléchargement PDF
-app.post('/api/export-pdf', (req, res) => {
-  const html = req.body.html;
-  const title = req.body.title || 'serie';
-  const fileName = `${title.replace(/\s+/g, '_')}.html`;
-  const filePath = path.join(__dirname, 'public', fileName);
-  fs.writeFileSync(filePath, html);
-  res.download(filePath, fileName, () => fs.unlinkSync(filePath));
-});
-
 app.listen(PORT, () => console.log(`🚀 Serveur démarré sur le port ${PORT}`));
+        ;
       
