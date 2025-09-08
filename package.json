@@ -1,7 +1,7 @@
 {
   "name": "histoire-ai",
-  "version": "1.0.0",
-  "description": "Générateur d’histoires longues avec OpenAI",
+  "version": "1.1.0",
+  "description": "Série romanesque épisode par épisode avec export PDF",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
